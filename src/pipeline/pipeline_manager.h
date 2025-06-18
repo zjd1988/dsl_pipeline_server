@@ -19,15 +19,12 @@ namespace DslPipelineServer
     class PipelineManager : public NonCopyable
     {
     public:
-        static PipelineManager& Instance();
+        PipelineManager() = default;
+        ~PipelineManager();
         int createPipeline(const PipelineConfig& pipeline_config);
         int createPipeline(const std::string config_file);
         int stopPipeline(const std::string pipeline_name);
         void stopPipelines();
-
-    private:
-        PipelineManager() = default;
-        ~PipelineManager();
 
     private:
         std::map<std::string, std::shared_ptr<DslPipeline>>        m_pipelines;

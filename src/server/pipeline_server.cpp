@@ -27,11 +27,17 @@ namespace DslPipelineServer
         m_server.setHost(ip_addr.c_str());
         m_server.setPort(port_num);
         m_server.setThreadNum(thread_num);
+
+        // init pipeline manager
+        m_pipeline_manager.reset(new PipelineManager());
     }
 
     PipelineServer::~PipelineServer()
     {
-        PipelineManager::Instance().stopPipelines();
+        if (nullptr != m_pipeline_manager.get())
+        {
+            m_pipeline_manager.reset();
+        }
         stopServer();
     }
 
@@ -49,6 +55,10 @@ namespace DslPipelineServer
     {
         const std::string& req_body = req->Body();
         std::string result;
+        if (nullptr != m_pipeline_manager.get() && 0 != m_pipeline_manager->createPipeline())
+        {
+
+        }
         return resp->Data((void*)result.c_str(), result.size(), false);
     }
 

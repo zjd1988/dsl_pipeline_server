@@ -5,9 +5,12 @@
 
 ********************************************/
 #pragma once
+#include <memory>
 #include <glib.h>
-#include "hv.h"
+#include "HttpServer.h"
+#include "hlog.h"
 #include "common/non_copyable.h"
+#include "pipeline/pipeline_manager.h"
 
 namespace DslPipelineServer
 {
@@ -25,8 +28,9 @@ namespace DslPipelineServer
         int stopPipeline(HttpRequest* req, HttpResponse* resp);
 
     private:
-        hv::HttpService                m_router;
-        hv::HttpServer                 m_server;
+        hv::HttpService                           m_router;
+        hv::HttpServer                            m_server;
+        std::unique_ptr<PipelineManager>          m_pipeline_manager;
     };
 
 } // namespace DslPipelineServer

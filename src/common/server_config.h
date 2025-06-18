@@ -17,4 +17,10 @@ namespace DslPipelineServer
         int                          thread_num;
     } PipelineServerConfig;
 
+    typedef struct ServerResp
+    {
+        int                          error_code;
+        std::string                  error_str;
+    } ServerResp;
+
 } // namespace DslPipelineServer

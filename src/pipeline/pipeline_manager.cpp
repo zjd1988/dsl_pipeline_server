@@ -10,15 +10,10 @@
 namespace DslPipelineServer
 {
 
-    PipelineManager& PipelineManager::Instance()
-    {
-        static PipelineManager manager;
-        return manager;
-    }
-
     PipelineManager::~PipelineManager()
     {
         stopPipelines();
+        dsl_delete_all();
     }
 
     int PipelineManager::createPipeline(const PipelineConfig& pipeline_config)
