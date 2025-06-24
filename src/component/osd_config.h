@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace DslPipelineServer
 {
@@ -19,5 +20,8 @@ namespace DslPipelineServer
         bool                                           bbox_enable;     // set to true to enable bounding box display, false otherwise.
         bool                                           mask_enable;     // set to true to enable segmentation mask display, false otherwise.
     } OsdCompConfig;
+
+    int parseOsdCompConfigFromNode(const YAML::Node& node, OsdCompConfig& config);
+    int dumpOsdCompConfigToNode(const OsdCompConfig& config, YAML::Node& node);
 
 } // namespace DslPipelineServer

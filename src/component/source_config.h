@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace DslPipelineServer
 {
@@ -91,44 +92,12 @@ namespace DslPipelineServer
         };
     } SourceCompConfig;
 
+    void logValidSourceCompType();
+    int convertStrToSourceCompType(const std::string type_str, SourceCompType& type);
+    int convertSourceCompTypeToStr(const SourceCompType type, std::string& type_str);
+    int parseSourceCompConfigFromNode(const YAML::Node& node, SourceCompConfig& config);
+    int dumpSourceCompConfigToNode(const SourceCompConfig& config, YAML::Node& node);
+    extern std::map<std::string, SourceCompType> gStrToSourceCompType;
+    extern std::map<SourceCompType, std::string> gSourceCompTypeToStr;
+
 } // namespace DslPipelineServer
-
-namespace YAML
-{
-
-    template <>
-    struct convert<DslPipelineServer::AppSourceCompConfig>
-    {
-    };
-
-    template <>
-    struct convert<DslPipelineServer::CsiSourceCompConfig>
-    {
-    };
-
-    template <>
-    struct convert<DslPipelineServer::V4l2SourceCompConfig>
-    {
-    };
-
-    template <>
-    struct convert<DslPipelineServer::UriSourceCompConfig>
-    {
-    };
-
-    template <>
-    struct convert<DslPipelineServer::FileSourceCompConfig>
-    {
-    };
-
-    template <>
-    struct convert<DslPipelineServer::RtspSourceCompConfig>
-    {
-    };
-
-    template <>
-    struct convert<DslPipelineServer::SourceCompConfig>
-    {
-    };
-
-} // namespace YAML

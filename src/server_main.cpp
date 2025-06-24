@@ -12,7 +12,6 @@
 #include "server/pipeline_server.h"
 namespace fs = ghc::filesystem;
 
-
 bool gAppRunFlag = true;
 void sigHandle(int signo)
 {

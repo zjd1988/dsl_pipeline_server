@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace DslPipelineServer
 {
@@ -18,5 +19,8 @@ namespace DslPipelineServer
         uint32_t                                       width;          // Frame width at which the tracker is to operate, in pixels.
         uint32_t                                       height;         // Frame height at which the tracker is to operate, in pixels.
     } TrackerCompConfig;
+
+    int parseTrackerCompConfigFromNode(const YAML::Node& node, TrackerCompConfig& config);
+    int dumpTrackerCompConfigToNode(const TrackerCompConfig& config, YAML::Node& node);
 
 } // namespace DslPipelineServer

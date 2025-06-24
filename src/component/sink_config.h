@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace DslPipelineServer
 {
@@ -15,6 +16,7 @@ namespace DslPipelineServer
     typedef enum SinkCompType
     {
         INVALID_SINK_COMP_TYPE                         = -1,
+        APP_SINK_COMP_TYPE                             = 0,      // allows the application to receive buffers or samples from a DSL Pipeline.
         V4L2_SINK_COMP_TYPE                            = 0,      // streams video to a V4L2 device or v4l2loopback
         FILE_SINK_COMP_TYPE                            = 1,      // encodes video to a media container file
         RECORD_SINK_COMP_TYPE                          = 2,      // similar to the File sink but with Start/Stop/Duration control and a cache for pre-start buffering
@@ -23,6 +25,11 @@ namespace DslPipelineServer
         RTSP_SERVER_SINK_COMP_TYPE                     = 5,      // streams encoded video via an RTSP (UDP) Server on a specified port
         MAX_SINK_COMP_TYPE,
     } SinkCompType;
+
+    typedef struct AppSinkComConfig
+    {
+        uint32_t                                       data_type;           // either `DSL_SINK_APP_DATA_TYPE_SAMPLE` or `DSL_SINK_APP_DATA_TYPE_BUFFER`
+    } AppSinkComConfig;
 
     typedef struct V4l2SinkCompConfig
     {
@@ -77,6 +84,7 @@ namespace DslPipelineServer
         SinkCompType                                   type;
         union
         {
+            AppSinkComConfig                           app_config;
             V4l2SinkCompConfig                         v4l2_config;
             FileSinkCompConfig                         file_config;
             RecordSinkCompConfig                       record_config;
@@ -86,5 +94,12 @@ namespace DslPipelineServer
         };
     } SinkCompConfig;
 
+    void logValidSinkCompType();
+    int convertStrToSinkCompType(const std::string type_str, SinkCompType& type);
+    int convertSinkCompTypeToStr(const SinkCompType type, std::string& type_str);
+    int parseSinkCompConfigFromNode(const YAML::Node& node, SinkCompConfig& config);
+    int dumpSinkCompConfigToNode(const SinkCompConfig& config, YAML::Node& node);
+    extern std::map<std::string, SinkCompType> gStrToSinkCompType;
+    extern std::map<SinkCompType, std::string> gSinkCompTypeToStr;
 
 } // namespace DslPipelineServer

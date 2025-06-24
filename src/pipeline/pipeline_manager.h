@@ -21,10 +21,11 @@ namespace DslPipelineServer
     public:
         PipelineManager() = default;
         ~PipelineManager();
-        int createPipeline(const PipelineConfig& pipeline_config);
-        int createPipeline(const std::string config_file);
-        int stopPipeline(const std::string pipeline_name);
-        void stopPipelines();
+        int createPipelineFromConfig(const PipelineConfig& config);
+        int createPipelineFromConfigFile(const std::string config_file);
+        int createPipelineFromConfigStr(const std::string config_str);
+        int stopPipeline(const std::string name);
+        void stopPipelines(const std::vector<std::string> names = {});
 
     private:
         std::map<std::string, std::shared_ptr<DslPipeline>>        m_pipelines;

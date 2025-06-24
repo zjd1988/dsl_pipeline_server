@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace DslPipelineServer
 {
@@ -61,5 +62,13 @@ namespace DslPipelineServer
             SecondaryTisInferCompConfig                 secondary_tis_config;
         };
     } InferCompConfig;
+
+    void logValidInferCompType();
+    int convertStrToInferCompType(const std::string type_str, InferCompType& type);
+    int convertInferCompTypeToStr(const InferCompType type, std::string& type_str);
+    int parseInferCompConfigFromNode(const YAML::Node& node, InferCompConfig& config);
+    int dumpInferCompConfigToNode(const InferCompConfig& config, YAML::Node& node);
+    extern std::map<std::string, InferCompType> gStrToInferCompType;
+    extern std::map<InferCompType, std::string> gInferCompTypeToStr;
 
 } // namespace DslPipelineServer
