@@ -10,6 +10,7 @@
 #include "HttpServer.h"
 #include "hlog.h"
 #include "common/non_copyable.h"
+#include "common/server_config.h"
 #include "pipeline/pipeline_manager.h"
 
 namespace DslPipelineServer

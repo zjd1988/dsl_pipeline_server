@@ -13,22 +13,22 @@ namespace YAML
 {
 
     template <>
-    struct convert<DslPipelineServer::AppSinkComConfig>
+    struct convert<DslPipelineServer::AppSinkCompConfig>
     {
-        using AppSinkComConfig = DslPipelineServer::AppSinkComConfig;
+        using AppSinkCompConfig = DslPipelineServer::AppSinkCompConfig;
 
-        static Node encode(const AppSinkComConfig& rhs)
+        static Node encode(const AppSinkCompConfig& rhs)
         {
             Node node;
             node["data_type"] = rhs.data_type;
             return node;
         }
 
-        static bool decode(const Node& node, AppSinkComConfig& rhs)
+        static bool decode(const Node& node, AppSinkCompConfig& rhs)
         {
             if (!node.IsMap())
             {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect AppSinkComConfig node type is map:{}, but get {}", 
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect AppSinkCompConfig node type is map:{}, but get {}", 
                     int(NodeType::Map), int(node.Type()));
                 return false;
             }
@@ -170,8 +170,10 @@ namespace YAML
         static Node encode(const RtspClientSinkCompConfig& rhs)
         {
             Node node;
-            node["file_path"] = rhs.file_path;
-            node["repeat_enabled"] = rhs.repeat_enabled;
+            node["uri"] = rhs.uri;
+            node["encoder"] = rhs.encoder;
+            node["bitrate"] = rhs.bitrate;
+            node["iframe_interval"] = rhs.iframe_interval;
             return node;
         }
 
@@ -184,8 +186,10 @@ namespace YAML
                 return false;
             }
 
-            rhs.file_path = node["file_path"].as<std::string>();
-            rhs.repeat_enabled = node["repeat_enabled"].as<bool>();
+            rhs.uri = node["uri"].as<std::string>();
+            rhs.encoder = node["encoder"].as<uint32_t>();
+            rhs.bitrate = node["bitrate"].as<uint32_t>();
+            rhs.iframe_interval = node["iframe_interval"].as<uint32_t>();
             return true;
         }
     };
@@ -198,12 +202,12 @@ namespace YAML
         static Node encode(const RtspServerSinkCompConfig& rhs)
         {
             Node node;
-            node["uri"] = rhs.uri;
-            node["protocol"] = rhs.protocol;
-            node["skip_frames"] = rhs.skip_frames;
-            node["drop_frame_interval"] = rhs.drop_frame_interval;
-            node["latency"] = rhs.latency;
-            node["timeout"] = rhs.timeout;
+            node["host"] = rhs.host;
+            node["udp_port"] = rhs.udp_port;
+            node["rtsp_port"] = rhs.rtsp_port;
+            node["encoder"] = rhs.encoder;
+            node["bitrate"] = rhs.bitrate;
+            node["iframe_interval"] = rhs.iframe_interval;
             return node;
         }
 
@@ -216,12 +220,12 @@ namespace YAML
                 return false;
             }
 
-            rhs.uri = node["uri"].as<std::string>();
-            rhs.protocol = node["protocol"].as<uint32_t>();
-            rhs.skip_frames = node["skip_frames"].as<uint32_t>();
-            rhs.drop_frame_interval = node["drop_frame_interval"].as<uint32_t>();
-            rhs.latency = node["latency"].as<uint32_t>();
-            rhs.timeout = node["timeout"].as<uint32_t>();
+            rhs.host = node["host"].as<std::string>();
+            rhs.udp_port = node["udp_port"].as<uint32_t>();
+            rhs.rtsp_port = node["rtsp_port"].as<uint32_t>();
+            rhs.encoder = node["encoder"].as<uint32_t>();
+            rhs.bitrate = node["bitrate"].as<uint32_t>();
+            rhs.iframe_interval = node["iframe_interval"].as<uint32_t>();
             return true;
         }
     };
@@ -240,49 +244,57 @@ namespace YAML
 
         static Node encode(const SinkCompConfig& rhs)
         {
+            std::string sink_type_str;
+            if (0 != DslPipelineServer::convertSinkCompTypeToStr(rhs.sink_type, sink_type_str))
+            {
+                std::string err_str = fmt::format("component: {} have invalid sink component type: {}", 
+                    rhs.comp_name, int(rhs.sink_type));
+                throw DslPipelineServer::ParseException(err_str);
+            }
             Node node;
-            node["type"] = rhs.type;
-            switch (rhs.type)
+            node["type"] = sink_type_str;
+            switch (rhs.sink_type)
             {
                 case DslPipelineServer::APP_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.app_config;
+                    node = rhs.app_config;
                     break;
                 }
                 case DslPipelineServer::V4L2_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.v4l2_config;
+                    node = rhs.v4l2_config;
                     break;
                 }
                 case DslPipelineServer::FILE_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.file_config;
+                    node = rhs.file_config;
                     break;
                 }
                 case DslPipelineServer::RECORD_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.record_config;
+                    node = rhs.record_config;
                     break;
                 }
                 case DslPipelineServer::RTMP_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.rtmp_config;
+                    node = rhs.rtmp_config;
                     break;
                 }
                 case DslPipelineServer::RTSP_CLIENT_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.rtsp_client_config;
+                    node = rhs.rtsp_client_config;
                     break;
                 }
                 case DslPipelineServer::RTSP_SERVER_SINK_COMP_TYPE:
                 {
-                    node["config"] = rhs.rtsp_server_config;
+                    node = rhs.rtsp_server_config;
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid sink component type: {}", int(rhs.type));
-                    break;
+                    std::string err_str = fmt::format("component: {} have invalid sink component type: {}", 
+                        rhs.comp_name, int(rhs.sink_type));
+                    throw DslPipelineServer::ParseException(err_str);
                 }
             }
             return node;
@@ -290,60 +302,63 @@ namespace YAML
 
         static bool decode(const Node& node, SinkCompConfig& rhs)
         {
+            auto comp_name = rhs.comp_name;
             if (!node.IsMap())
             {
                 PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect SinkCompConfig node type is map:{}, but get {}", 
                     int(NodeType::Map), int(node.Type()));
                 return false;
             }
-            auto type_str = node["type"].as<std::string>();
-            if (gStrToSinkCompType.end() == gStrToSinkCompType.find(type_str))
+            auto sink_type_str = node["type"].as<std::string>();
+            DslPipelineServer::SinkCompType sink_type;
+            if (0 != DslPipelineServer::convertStrToSinkCompType(sink_type_str, sink_type))
             {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid sink component type {}, please check", type_str);
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component: {} have invalid sink component type: {}", 
+                    comp_name, sink_type_str);
                 return false;
             }
-            auto type = gStrToSinkCompType[type_str];
-            rhs.type = type;
-            switch (rhs.type)
+            rhs.sink_type = sink_type;
+            switch (rhs.sink_type)
             {
                 case DslPipelineServer::APP_SINK_COMP_TYPE:
                 {
-                    rhs.app_config = node["config"].as<AppSinkCompConfig>();
+                    rhs.app_config = node.as<AppSinkCompConfig>();
                     break;
                 }
                 case DslPipelineServer::V4L2_SINK_COMP_TYPE:
                 {
-                    rhs.csi_config = node["config"].as<V4l2SinkCompConfig>();
+                    rhs.v4l2_config = node.as<V4l2SinkCompConfig>();
                     break;
                 }
                 case DslPipelineServer::FILE_SINK_COMP_TYPE:
                 {
-                    rhs.v4l2_config = node["config"].as<FileSinkCompConfig>();
+                    rhs.file_config = node.as<FileSinkCompConfig>();
                     break;
                 }
                 case DslPipelineServer::RECORD_SINK_COMP_TYPE:
                 {
-                    rhs.uri_config = node["config"].as<RecordSinkCompConfig>();
+                    rhs.record_config = node.as<RecordSinkCompConfig>();
                     break;
                 }
                 case DslPipelineServer::RTMP_SINK_COMP_TYPE:
                 {
-                    rhs.file_config = node["config"].as<RtmpSinkCompConfig>();
+                    rhs.rtmp_config = node.as<RtmpSinkCompConfig>();
                     break;
                 }
                 case DslPipelineServer::RTSP_CLIENT_SINK_COMP_TYPE:
                 {
-                    rhs.rtsp_config = node["config"].as<RtspClientSinkCompConfig>();
+                    rhs.rtsp_client_config = node.as<RtspClientSinkCompConfig>();
                     break;
                 }
                 case DslPipelineServer::RTSP_SERVER_SINK_COMP_TYPE:
                 {
-                    rhs.rtsp_config = node["config"].as<RtspServerSinkCompConfig>();
+                    rhs.rtsp_server_config = node.as<RtspServerSinkCompConfig>();
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid sink component type: {}", int(rhs.type));
+                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component: {} invalid sink component type: {}", 
+                        comp_name, sink_type_str);
                     return false;
                 }
             }
@@ -385,7 +400,7 @@ namespace DslPipelineServer
         {
             auto type = it->first;
             auto type_str = it->second;
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", type, type_str);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", int(type), type_str);
         }
         return;
     }
@@ -408,32 +423,16 @@ namespace DslPipelineServer
         return 0;
     }
 
-    int parseSinkCompConfigFromNode(const YAML::Node& node, SinkCompConfig& config)
+    void parseSinkCompConfigFromNode(const YAML::Node& node, SinkCompConfig& config)
     {
-        try
-        {
-            config = node["config"].as<SinkCompConfig>();
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse sink component node error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        config = node.as<SinkCompConfig>();
+        return;
     }
 
-    int dumpSinkCompConfigToNode(const SinkCompConfig& config, YAML::Node& node)
+    void dumpSinkCompConfigToNode(const SinkCompConfig& config, YAML::Node& node)
     {
-        try
-        {
-            node["config"] = config;
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "dump sink component config error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        node = config;
+        return;
     }
 
 } // namespace DslPipelineServer

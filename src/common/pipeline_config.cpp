@@ -13,132 +13,70 @@ namespace YAML
 {
 
     template <>
-    struct convert<DslPipelineServer::ComponentConfig>
+    struct convert<DslPipelineServer::PipelineConfig>
     {
-        using ComponentConfig = DslPipelineServer::ComponentConfig;
+        using PipelineConfig = DslPipelineServer::PipelineConfig;
+        using BaseCompConfig = DslPipelineServer::BaseCompConfig;
         using SourceCompConfig = DslPipelineServer::SourceCompConfig;
         using SinkCompConfig = DslPipelineServer::SinkCompConfig;
         using InferCompConfig = DslPipelineServer::InferCompConfig;
         using TrackerCompConfig = DslPipelineServer::TrackerCompConfig;
         using OsdCompConfig = DslPipelineServer::OsdCompConfig;
 
-        static Node encode(const ComponentConfig& rhs)
-        {
-            Node node;
-            node["name"] = rhs.name;
-            node["type"] = rhs.type;
-            int ret = 0;
-            switch (rhs.type)
-            {
-                case DslPipelineServer::SOURCE_COMPONENT_TYPE:
-                {
-                    ret = dumpSourceCompConfigToNode(rhs.source_config, node);
-                    break;
-                }
-                case DslPipelineServer::INFER_COMPONENT_TYPE:
-                {
-                    ret = dumpInferCompConfigToNode(rhs.infer_config, node);
-                    break;
-                }
-                case DslPipelineServer::TRACKER_COMPONENT_TYPE:
-                {
-                    ret = dumpTrackerCompConfigToNode(rhs.tracker_config, node);
-                    break;
-                }
-                case DslPipelineServer::OSD_COMPONENT_TYPE:
-                {
-                    ret = dumpOsdCompConfigToNode(rhs.osd_config, node);
-                    break;
-                }
-                case DslPipelineServer::SINK_COMPONENT_TYPE:
-                {
-                    ret = dumpSinkCompConfigToNode(rhs.sink_config, node);
-                    break;
-                }
-                default:
-                {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid component type: {}", int(rhs.type));
-                    ret = -1;
-                    break;
-                }
-            }
-            return node;
-        }
-
-        static bool decode(const Node& node, ComponentConfig& rhs)
-        {
-            if (!node.IsMap())
-            {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect ComponentConfig node type is map:{}, but get {}", 
-                    int(NodeType::Map), int(node.Type()));
-                return false;
-            }
-
-            rhs.name = node["name"].as<std::string>();
-            auto type_str = node["type"].as<std::string>();
-            if (gStrToComponentType.end() == gStrToComponentType.find(type_str))
-            {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid component type {}, please check", type_str);
-                return false;
-            }
-            auto type = gStrToComponentType[type_str];
-            rhs.type = type;
-            int ret = 0;
-            switch (type)
-            {
-                case DslPipelineServer::SOURCE_COMPONENT_TYPE:
-                {
-                    ret = parseSourceCompConfigFromNode(node, rhs.source_config);
-                    break;
-                }
-                case DslPipelineServer::INFER_COMPONENT_TYPE:
-                {
-                    ret = parseInferCompConfigFromNode(node, rhs.infer_config);
-                    break;
-                }
-                case DslPipelineServer::TRACKER_COMPONENT_TYPE:
-                {
-                    ret = parseTrackerCompConfigFromNode(node, rhs.tracker_config);
-                    break;
-                }
-                case DslPipelineServer::OSD_COMPONENT_TYPE:
-                {
-                    ret = parseOsdCompConfigFromNode(node, rhs.osd_config);
-                    break;
-                }
-                case DslPipelineServer::SINK_COMPONENT_TYPE:
-                {
-                    ret = parseSinkCompConfigFromNode(node, rhs.sink_config);
-                    break;
-                }
-                default:
-                {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid component type: {}", int(rhs.type));
-                    ret = -1;
-                    break;
-                }
-            }
-            return (ret == 0);
-        }
-    };
-
-    template <>
-    struct convert<DslPipelineServer::PipelineConfig>
-    {
-        using PipelineConfig = DslPipelineServer::PipelineConfig;
-        using ComponentConfig = DslPipelineServer::ComponentConfig;
-
         static Node encode(const PipelineConfig& rhs)
         {
             Node node;
             node["components"] = YAML::Node();
-            for (const auto& name : rhs.component_names)
+            for (size_t index = 0; index < rhs.component_configs.size(); index++)
             {
-                if (rhs.component_configs.end() != rhs.component_configs.find(name))
+                auto& config = rhs.component_configs[index];
+                std::string comp_type_str;
+                if (0 != convertComponentTypeToStr(config->comp_type, comp_type_str))
                 {
-                    Node component_node = rhs.component_configs[name];
-                    node["components"].push_back(component_node);
+                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "{} has invalid component type: {}", 
+                        config->comp_name, comp_type_str);
+                    continue;
                 }
+                Node config_node;
+                switch (config->comp_type)
+                {
+                    case DslPipelineServer::SOURCE_COMPONENT_TYPE:
+                    {
+                        dumpSourceCompConfigToNode(*(SourceCompConfig*)config.get(), config_node);
+                        break;
+                    }
+                    case DslPipelineServer::INFER_COMPONENT_TYPE:
+                    {
+                        dumpInferCompConfigToNode(*(InferCompConfig*)config.get(), config_node);
+                        break;
+                    }
+                    case DslPipelineServer::TRACKER_COMPONENT_TYPE:
+                    {
+                        dumpTrackerCompConfigToNode(*(TrackerCompConfig*)config.get(), config_node);
+                        break;
+                    }
+                    case DslPipelineServer::OSD_COMPONENT_TYPE:
+                    {
+                        dumpOsdCompConfigToNode(*(OsdCompConfig*)config.get(), config_node);
+                        break;
+                    }
+                    case DslPipelineServer::SINK_COMPONENT_TYPE:
+                    {
+                        dumpSinkCompConfigToNode(*(SinkCompConfig*)config.get(), config_node);
+                        break;
+                    }
+                    default:
+                    {
+                        PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "{} has invalid component type: {}", 
+                            config->comp_name, int(config->comp_type));
+                        break;
+                    }
+                }
+                Node component_node;
+                component_node["name"] = config->comp_name;
+                component_node["type"] = comp_type_str;
+                component_node["config"] = config_node;
+                node["components"].push_back(component_node);
             }
             return node;
         }
@@ -155,19 +93,65 @@ namespace YAML
             {
                 for (const auto& component_node : node["components"])
                 {
-                    auto component_config = component_node.as<ComponentConfig>();
-                    auto name = component_config.name;
-                    // check dumplicate component
-                    if (rhs.component_configs.end() != rhs.component_configs.find(name))
+                    if (!component_node.IsMap())
                     {
-                        PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "duplicate component {}, please check", name);
+                        PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect ComponentConfig node type is map:{}, but get {}", 
+                            int(NodeType::Map), int(component_node.Type()));
                         return false;
                     }
-                    rhs.component_configs[name] = component_config;
-                    rhs.component_names.emplace_back(name);
+                    std::string name = component_node["name"].as<std::string>();
+                    std::string type_str = component_node["type"].as<std::string>();
+                    DslPipelineServer::ComponentType type;
+                    if (0 != convertStrToComponentType(type_str, type))
+                    {
+                        PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component {} has invalid component type: {}", name, type_str);
+                        return false;
+                    }
+                    int ret = 0;
+                    std::shared_ptr<BaseCompConfig> config;
+                    config->comp_name = name;
+                    config->comp_type = type;
+                    auto& config_node = component_node["config"];
+                    switch (type)
+                    {
+                        case DslPipelineServer::SOURCE_COMPONENT_TYPE:
+                        {
+                            config.reset(new SourceCompConfig());
+                            parseSourceCompConfigFromNode(config_node, *(SourceCompConfig*)config.get());
+                            break;
+                        }
+                        case DslPipelineServer::INFER_COMPONENT_TYPE:
+                        {
+                            parseInferCompConfigFromNode(config_node, *(InferCompConfig*)config.get());
+                            break;
+                        }
+                        case DslPipelineServer::TRACKER_COMPONENT_TYPE:
+                        {
+                            parseTrackerCompConfigFromNode(config_node, *(TrackerCompConfig*)config.get());
+                            break;
+                        }
+                        case DslPipelineServer::OSD_COMPONENT_TYPE:
+                        {
+                            parseOsdCompConfigFromNode(config_node, *(OsdCompConfig*)config.get());
+                            break;
+                        }
+                        case DslPipelineServer::SINK_COMPONENT_TYPE:
+                        {
+                            parseSinkCompConfigFromNode(config_node, *(SinkCompConfig*)config.get());
+                            break;
+                        }
+                        default:
+                        {
+                            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "current not support component type: {}", type_str);
+                            break;
+                        }
+                    }
+                    if (0 == ret)
+                        rhs.component_configs.push_back(config);
+                    else
+                        PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse component: {} fail", name);
                 }
             }
-
             return true;
         }
     };
@@ -176,66 +160,6 @@ namespace YAML
 
 namespace DslPipelineServer
 {
-
-    // string to component type map
-    std::map<std::string, ComponentType> gStrToComponentType = {
-        {"SOURCE",                              SOURCE_COMPONENT_TYPE},
-        {"PREPROCESS",                          PREPROCESS_COMPONENT_TYPE},
-        {"INFER",                               INFER_COMPONENT_TYPE},
-        {"TRACKER",                             TRACKER_COMPONENT_TYPE},
-        {"TILER",                               TILER_COMPONENT_TYPE},
-        {"OSD",                                 OSD_COMPONENT_TYPE},
-        {"SINK",                                SINK_COMPONENT_TYPE},
-        {"TEE",                                 TEE_COMPONENT_TYPE},
-        {"BRANCH",                              BRANCH_COMPONENT_TYPE},
-        {"REMUXER",                             REMUXER_COMPONENT_TYPE},
-        {"PPH",                                 PPH_COMPONENT_TYPE},
-    };
-
-    // component type to string map
-    std::map<ComponentType, std::string> gComponentTypeToStr = {
-        {SOURCE_COMPONENT_TYPE,                 "SOURCE"},
-        {PREPROCESS_COMPONENT_TYPE,             "PREPROCESS"},
-        {INFER_COMPONENT_TYPE,                  "INFER"},
-        {TRACKER_COMPONENT_TYPE,                "TRACKER"},
-        {TILER_COMPONENT_TYPE,                  "TILER"},
-        {OSD_COMPONENT_TYPE,                    "OSD"},
-        {SINK_COMPONENT_TYPE,                   "SINK"},
-        {TEE_COMPONENT_TYPE,                    "TEE"},
-        {BRANCH_COMPONENT_TYPE,                 "BRANCH"},
-        {REMUXER_COMPONENT_TYPE,                "REMUXER"},
-        {PPH_COMPONENT_TYPE,                    "PPH"},
-    };
-
-    void logValidPipelineCompType()
-    {
-        PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "valid pipeline component type as follows:");
-        for (auto it = gComponentTypeToStr.begin(); it != gComponentTypeToStr.end(); it++)
-        {
-            auto type = it->first;
-            auto type_str = it->second;
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", type, type_str);
-        }
-        return;
-    }
-
-    int convertStrToComponentType(const std::string type_str, ComponentType& type)
-    {
-        if (gStrToComponentType.end() == gStrToComponentType.find(type_str))
-            return -1;
-
-        type = gStrToComponentType[type_str];
-        return 0;
-    }
-
-    int convertComponentTypeToStr(const ComponentType type, std::string& type_str)
-    {
-        if (gComponentTypeToStr.end() == gComponentTypeToStr.find(type))
-            return -1;
-
-        type_str = gComponentTypeToStr[type];
-        return 0;
-    }
 
     int parsePipelineConfigFromStr(const std::string& config_str, PipelineConfig& config)
     {

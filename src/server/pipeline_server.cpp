@@ -19,8 +19,8 @@ namespace DslPipelineServer
         // disbale hv log
         hlog_disable();
         // register server apis
-        m_router.POST("/create_pipeline", std::bind(&PipelineServer::createPipeline, this, _1, _2));
-        m_router.POST("/stop_pipeline", std::bind(&PipelineServer::stopPipeline, this, _1, _2));
+        m_router.POST("/create_pipeline", std::bind(&PipelineServer::createPipeline, this, std::placeholders::_1, std::placeholders::_2));
+        m_router.POST("/stop_pipeline", std::bind(&PipelineServer::stopPipeline, this, std::placeholders::_1, std::placeholders::_2));
 
         // register http service, and set server config
         m_server.registerHttpService(&m_router);
@@ -55,10 +55,10 @@ namespace DslPipelineServer
     {
         const std::string& req_body = req->Body();
         std::string result;
-        if (nullptr != m_pipeline_manager.get() && 0 != m_pipeline_manager->createPipeline())
-        {
+        // if (nullptr != m_pipeline_manager.get() && 0 != m_pipeline_manager->createPipeline())
+        // {
 
-        }
+        // }
         return resp->Data((void*)result.c_str(), result.size(), false);
     }
 

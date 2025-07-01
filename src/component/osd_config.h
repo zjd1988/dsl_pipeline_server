@@ -9,11 +9,12 @@
 #include <vector>
 #include <string>
 #include <yaml-cpp/yaml.h>
+#include "component/base_config.h"
 
 namespace DslPipelineServer
 {
 
-    typedef struct OsdCompConfig
+    typedef struct OsdCompConfig : public BaseCompConfig
     {
         bool                                           text_enable;     // set to true to enable object text display, false otherwise.
         bool                                           clock_enable;    // set to true to enable clock display, false otherwise.
@@ -21,7 +22,7 @@ namespace DslPipelineServer
         bool                                           mask_enable;     // set to true to enable segmentation mask display, false otherwise.
     } OsdCompConfig;
 
-    int parseOsdCompConfigFromNode(const YAML::Node& node, OsdCompConfig& config);
-    int dumpOsdCompConfigToNode(const OsdCompConfig& config, YAML::Node& node);
+    void parseOsdCompConfigFromNode(const YAML::Node& node, OsdCompConfig& config);
+    void dumpOsdCompConfigToNode(const OsdCompConfig& config, YAML::Node& node);
 
 } // namespace DslPipelineServer

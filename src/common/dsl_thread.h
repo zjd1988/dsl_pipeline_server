@@ -51,7 +51,7 @@ namespace DslPipelineServer
             return threadId != nullptr;
         }
 
-        ~GThreadWrapper()
+        ~DslThread()
         {
             if (threadId) {
                 std::cerr << "Thread not joined, calling join in destructor." << std::endl;
@@ -65,7 +65,7 @@ namespace DslPipelineServer
 
         static gpointer threadFuncWrapper(gpointer data)
         {
-            GThreadWrapper* wrapper = static_cast<GThreadWrapper*>(data);
+            DslThread* wrapper = static_cast<DslThread*>(data);
             if (wrapper && wrapper->threadFunc)
             {
                 wrapper->threadFunc();

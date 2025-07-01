@@ -20,24 +20,29 @@ namespace DslPipelineServer
         return wide_str;
     }
 
-    DslPipeline::DslPipeline(const PipelineConfig& config)
+    DslPipeline::DslPipeline(const PipelineConfig& config, const std::string name)
     {
         m_name = config.name;
+        if ("" != name)
+            m_name = name;
         if (0 != createComponents(config))
-        {
             return;
-        }
         m_init_flag = true;
+    }
+
+    DslPipeline::~DslPipeline()
+    {
+        return;
     }
 
     int DslPipeline::dslSourceComponentCreate(const std::string name, const SourceCompConfig& config)
     {
         int ret = 0;
-        auto type = config.type;
+        auto type = config.source_type;
         std::string type_str;
         if (0 != convertSourceCompTypeToStr(type, type_str))
         {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid source component type: {} ", type);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid source component type: {} ", int(type));
             logValidSourceCompType();
             return -1;
         }
@@ -63,7 +68,7 @@ namespace DslPipelineServer
             {
                 auto v4l2_config = config.v4l2_config;
                 std::string device_location = v4l2_config.device_location;
-                std::wstring w_device_location = convertStrToWStr(w_device_location);
+                std::wstring w_device_location = convertStrToWStr(device_location);
                 ret = (int)dsl_source_v4l2_new(w_name.c_str(), w_device_location.c_str());
                 break;
             }
@@ -90,7 +95,7 @@ namespace DslPipelineServer
                 std::string uri = rtsp_config.uri;
                 std::wstring w_uri = convertStrToWStr(uri);
                 ret = (int)dsl_source_rtsp_new(w_name.c_str(), w_uri.c_str(), rtsp_config.protocol, rtsp_config.skip_frames, 
-                    rtsp_config.dropFrameInterval, rtsp_config.latency, rtsp_config.timeout);
+                    rtsp_config.drop_frame_interval, rtsp_config.latency, rtsp_config.timeout);
                 break;
             }
             default:
@@ -105,11 +110,11 @@ namespace DslPipelineServer
     int DslPipeline::dslInferComponentCreate(const std::string name, const InferCompConfig& config)
     {
         int ret = 0;
-        auto type = config.type;
+        auto type = config.infer_type;
         std::string type_str;
         if (0 != convertInferCompTypeToStr(type, type_str))
         {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid infer component type: {} ", type);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid infer component type: {} ", int(type));
             logValidInferCompType();
             return -1;
         }
@@ -169,22 +174,30 @@ namespace DslPipelineServer
 
     int DslPipeline::dslTrackerComponentCreate(const std::string name, const TrackerCompConfig& config)
     {
-        return 0;
+        int ret = 0;
+        std::wstring w_name = convertStrToWStr(name);
+        std::string config_file = config.config_file;
+        std::wstring w_config_file = convertStrToWStr(config_file);
+        ret = (int)dsl_tracker_new(w_name.c_str(), w_config_file.c_str(), config.height, config.width);
+        return ret;
     }
 
     int DslPipeline::dslOsdComponentCreate(const std::string name, const OsdCompConfig& config)
     {
-        return 0;
+        int ret = 0;
+        std::wstring w_name = convertStrToWStr(name);
+        ret = (int)dsl_osd_new(w_name.c_str(), config.text_enable, config.clock_enable, config.bbox_enable, config.mask_enable);
+        return ret;
     }
 
     int DslPipeline::dslSinkComponentCreate(const std::string name, const SinkCompConfig& config)
     {
         int ret = 0;
-        auto type = config.type;
+        auto type = config.sink_type;
         std::string type_str;
         if (0 != convertSinkCompTypeToStr(type, type_str))
         {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid sink component type: {} ", type);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid sink component type: {} ", int(type));
             logValidSinkCompType();
             return -1;
         }
@@ -194,59 +207,61 @@ namespace DslPipelineServer
             case APP_SINK_COMP_TYPE:
             {
                 auto app_config = config.app_config;
-                std::string buffer_in_format = app_config.buffer_in_format;
-                std::wstring w_buffer_in_format = convertStrToWStr(buffer_in_format);
-                ret = (int)dsl_source_app_new(w_name.c_str(), app_config.is_live, w_buffer_in_format.c_str(), app_config.width, 
-                    app_config.height, app_config.fps_n, app_config.fps_d);
+                ret = (int)dsl_sink_app_new(w_name.c_str(), app_config.data_type, nullptr, nullptr);
                 break;
             }
             case V4L2_SINK_COMP_TYPE:
             {
-                auto csi_config = config.csi_config;
-                ret = (int)dsl_source_csi_new(w_name.c_str(), csi_config.width, csi_config.height, csi_config.fps_n, csi_config.fps_d);
+                auto v4l2_config = config.v4l2_config;
+                std::string device_location = v4l2_config.device_location;
+                std::wstring w_device_location = convertStrToWStr(device_location);
+                ret = (int)dsl_sink_v4l2_new(w_name.c_str(), w_device_location.c_str());
                 break;
             }
             case FILE_SINK_COMP_TYPE:
             {
-                auto v4l2_config = config.v4l2_config;
-                std::string device_location = v4l2_config.device_location;
-                std::wstring w_device_location = convertStrToWStr(w_device_location);
-                ret = (int)dsl_source_v4l2_new(w_name.c_str(), w_device_location.c_str());
+                auto file_config = config.file_config;
+                std::string file_path = file_config.file_path;
+                std::wstring w_file_path = convertStrToWStr(file_path);
+                ret = (int)dsl_sink_file_new(w_name.c_str(), w_file_path.c_str(), file_config.encoder, file_config.container, 
+                    file_config.bitrate, file_config.iframe_interval);
                 break;
             }
             case RECORD_SINK_COMP_TYPE:
             {
-                auto uri_config = config.uri_config;
-                std::string uri = uri_config.uri;
-                std::wstring w_uri = convertStrToWStr(uri);
-                ret = (int)dsl_source_uri_new(w_name.c_str(), w_uri.c_str(), uri_config.is_live, 
-                    uri_config.skip_frames, uri_config.drop_frame_interval);
+                auto record_config = config.record_config;
+                std::string out_dir = record_config.out_dir;
+                std::wstring w_out_dir = convertStrToWStr(out_dir);
+                ret = (int)dsl_sink_record_new(w_name.c_str(), w_out_dir.c_str(), record_config.encoder, record_config.container, 
+                    record_config.bitrate, record_config.iframe_interval, nullptr);
                 break;
             }
             case RTMP_SINK_COMP_TYPE:
             {
-                auto file_config = config.file_config;
-                std::string file_path = file_config.file_path;
-                std::wstring w_file_path = convertStrToWStr(file_path);
-                ret = (int)dsl_source_file_new(w_name.c_str(), w_file_path.c_str(), file_config.repeat_enabled);
+                auto rtmp_config = config.rtmp_config;
+                std::string uri = rtmp_config.uri;
+                std::wstring w_uri = convertStrToWStr(uri);
+                ret = (int)dsl_sink_rtmp_new(w_name.c_str(), w_uri.c_str(), rtmp_config.encoder, rtmp_config.bitrate, 
+                    rtmp_config.iframe_interval);
                 break;
             }
             case RTSP_CLIENT_SINK_COMP_TYPE:
             {
-                auto rtsp_config = config.rtsp_config;
-                std::string uri = rtsp_config.uri;
+                auto rtsp_client_config = config.rtsp_client_config;
+                std::string uri = rtsp_client_config.uri;
                 std::wstring w_uri = convertStrToWStr(uri);
-                ret = (int)dsl_source_rtsp_new(w_name.c_str(), w_uri.c_str(), rtsp_config.protocol, rtsp_config.skip_frames, 
-                    rtsp_config.dropFrameInterval, rtsp_config.latency, rtsp_config.timeout);
+                ret = (int)dsl_sink_rtsp_client_new(w_name.c_str(), w_uri.c_str(), rtsp_client_config.encoder, 
+                    rtsp_client_config.bitrate, rtsp_client_config.iframe_interval);
                 break;
             }
             case RTSP_SERVER_SINK_COMP_TYPE:
             {
-                auto rtsp_config = config.rtsp_config;
-                std::string uri = rtsp_config.uri;
-                std::wstring w_uri = convertStrToWStr(uri);
-                ret = (int)dsl_source_rtsp_new(w_name.c_str(), w_uri.c_str(), rtsp_config.protocol, rtsp_config.skip_frames, 
-                    rtsp_config.dropFrameInterval, rtsp_config.latency, rtsp_config.timeout);
+                auto rtsp_server_config = config.rtsp_server_config;
+                std::string host = rtsp_server_config.host;
+                std::wstring w_host = convertStrToWStr(host);
+                ret = (int)dsl_sink_rtsp_server_new(w_name.c_str(), w_host.c_str(), rtsp_server_config.udp_port, 
+                    rtsp_server_config.rtsp_port, rtsp_server_config.encoder, rtsp_server_config.bitrate, 
+                    rtsp_server_config.iframe_interval);
                 break;
             }
             default:
@@ -261,27 +276,15 @@ namespace DslPipelineServer
     int DslPipeline::createComponents(const PipelineConfig& config)
     {
         int ret = 0;
-        for (size_t index = 0; index < config.component_names.size(); index++)
+        for (size_t index = 0; index < config.component_configs.size(); index++)
         {
-            std::string comp_name = config.component_names[index];
-            if (config.component_configs.end() == config.component_configs.find(comp_name))
-            {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "cannot find component: {} config info", comp_name);
-                return -1;
-            }
-
-            auto& comp_config = config.component_configs[comp_name];
-            if (comp_config.name != comp_name)
-            {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component name: {} in config info not equal to expect: {}", 
-                    comp_config.name, comp_name);
-                return -1;
-            }
-            auto comp_type = comp_config.type;
+            auto& comp_config = config.component_configs[index];
+            auto comp_name = comp_config->comp_name;
+            auto comp_type = comp_config->comp_type;
             std::string comp_type_str;
             if (0 != convertComponentTypeToStr(comp_type, comp_type_str))
             {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid component type: {} ", comp_type);
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "{} have invalid component type: {} ", comp_name, int(comp_type));
                 logValidPipelineCompType();
                 return -1;
             }
@@ -289,32 +292,32 @@ namespace DslPipelineServer
             {
                 case SOURCE_COMPONENT_TYPE:
                 {
-                    ret = dslSourceComponentCreate(comp_name, comp_config.source_config);
+                    ret = dslSourceComponentCreate(comp_name, *(SourceCompConfig*)comp_config.get());
                     break;
                 }
                 case INFER_COMPONENT_TYPE:
                 {
-                    ret = dslInferComponentCreate(comp_name, comp_config.infer_config);
+                    ret = dslInferComponentCreate(comp_name, *(InferCompConfig*)comp_config.get());
                     break;
                 }
                 case TRACKER_COMPONENT_TYPE:
                 {
-                    ret = dslTrackerComponentCreate(comp_name, comp_config.tracker_config);
+                    ret = dslTrackerComponentCreate(comp_name, *(TrackerCompConfig*)comp_config.get());
                     break;
                 }
                 case OSD_COMPONENT_TYPE:
                 {
-                    ret = dslOsdComponentCreate(comp_name, comp_config.osd_config);
+                    ret = dslOsdComponentCreate(comp_name, *(OsdCompConfig*)comp_config.get());
                     break;
                 }
                 case SINK_COMPONENT_TYPE:
                 {
-                    ret = dslSinkComponentCreate(comp_name, comp_config.sink_config);
+                    ret = dslSinkComponentCreate(comp_name, *(SinkCompConfig*)comp_config.get());
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "current not support create component type: {} for {}", comp_type_str, comp_name);
+                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "{} has invalid component type: {}", comp_name, comp_type_str);
                     return -1;
                 }
             }

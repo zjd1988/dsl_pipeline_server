@@ -5,8 +5,9 @@
 mkdir dsl_server && cd dsl_server
 docker pull nvcr.io/nvidia/deepstream:7.0-gc-triton-devel
 git clone https://github.com/prominenceai/deepstream-services-library.git
-git clone https://github.com/ithewei/libhv.git
-docker run --rm -it --gpus="device=1" -v $PWD/dsl_server:/workspace/dsl_server --entrypoint /bin/bash nvcr.io/nvidia/deepstream:7.0-triton-multiarch
+git clone https://github.com/ithewei/libhv.git -b v1.3.3
+git clone https://github.com/jbeder/yaml-cpp.git -b 0.8.0
+docker run --rm -it --gpus="device=1" -v $PWD/dsl_server:/workspace/dsl_server --entrypoint /bin/bash nvcr.io/nvidia/deepstream:7.0-gc-triton-devel
 
 apt update && apt-get install \
     libgstrtspserver-1.0-dev \
@@ -27,15 +28,18 @@ apt-get install \
 
 pkg-config --cflags json-glib-1.0
 
-
 cd /workspace/dsl_server/deepstream-services-library
-make -j8
-make install
+make -j8 && make install
 
-cd /workspace/libhv
+cd /workspace/dsl_server/libhv
 mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=$PWD/../install ..
-cmake --build .
+make -j8 && make install
+
+cd /workspace/dsl_server/yaml-cpp
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=$PWD/../install -DBUILD_SHARED_LIBS=ON ..
+make -j8 && make install
 ```
 
 ## 

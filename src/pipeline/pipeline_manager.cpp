@@ -9,23 +9,14 @@
 #include <chrono>
 #include <functional>
 #include <sstream>
+#include "DslApi.h"
 #include "common/logger.h"
+#include "common/uuid.h"
 #include "common/pipeline_config.h"
 #include "pipeline/pipeline_manager.h"
 
 namespace DslPipelineServer
 {
-
-    static std::string generateUniqueString()
-    {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-        auto value = now_ms.time_since_epoch();
-        std::hash<decltype(value)> hash_fn;
-        std::stringstream ss;
-        ss << hash_fn(value);
-        return ss.str();
-    }
 
     PipelineManager::~PipelineManager()
     {
@@ -40,15 +31,14 @@ namespace DslPipelineServer
         if ("" == name)
         {
             PIPELINE_LOG(PIPELINE_LOG_LEVEL_WARN, "pipeline name is null, will generate random name based on time and hash");
-            name = "pipeline_" + generateUniqueString();
-            config.name = name;
+            name = "pipeline_" + genNewUUID();
         }
         if (m_pipelines.end() != m_pipelines.find(name))
         {
             PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "pipeline: {} already exists", name);
             return -1;
         }
-        std::shared_ptr<DslPipeline> pipeline(new DslPipeline(config))
+        std::shared_ptr<DslPipeline> pipeline(new DslPipeline(config, name));
         if (nullptr == pipeline.get() || false == pipeline->getInitFlag())
         {
             PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "creat pipeline: {} fail", name);

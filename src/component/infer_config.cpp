@@ -143,34 +143,42 @@ namespace YAML
 
         static Node encode(const InferCompConfig& rhs)
         {
+            std::string infer_type_str;
+            if (0 != DslPipelineServer::convertInferCompTypeToStr(rhs.infer_type, infer_type_str))
+            {
+                std::string err_str = fmt::format("component: {} have invalid infer component type: {}", 
+                    rhs.comp_name, int(rhs.infer_type));
+                throw DslPipelineServer::ParseException(err_str);
+            }
             Node node;
-            node["type"] = rhs.type;
-            switch (rhs.type)
+            node["type"] = infer_type_str;
+            switch (rhs.infer_type)
             {
                 case DslPipelineServer::PRIMARY_GIE_INFER_COMP_TYPE:
                 {
-                    node["config"] = rhs.primary_gie_config;
+                    node = rhs.primary_gie_config;
                     break;
                 }
                 case DslPipelineServer::SECONDARY_GIE_INFER_COMP_TYPE:
                 {
-                    node["config"] = rhs.secondary_gie_config;
+                    node = rhs.secondary_gie_config;
                     break;
                 }
                 case DslPipelineServer::PRIMARY_TIS_INFER_COMP_TYPE:
                 {
-                    node["config"] = rhs.primary_tis_config;
+                    node = rhs.primary_tis_config;
                     break;
                 }
                 case DslPipelineServer::SECONDARY_TIS_INFER_COMP_TYPE:
                 {
-                    node["config"] = rhs.secondary_tis_config;
+                    node = rhs.secondary_tis_config;
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid infer component type: {}", int(rhs.type));
-                    break;
+                    std::string err_str = fmt::format("component: {} have invalid infer component type: {}", 
+                        rhs.comp_name, int(rhs.infer_type));
+                    throw DslPipelineServer::ParseException(err_str);
                 }
             }
             return node;
@@ -178,45 +186,48 @@ namespace YAML
 
         static bool decode(const Node& node, InferCompConfig& rhs)
         {
+            auto comp_name = rhs.comp_name;
             if (!node.IsMap())
             {
                 PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect InferCompConfig node type is map:{}, but get {}", 
                     int(NodeType::Map), int(node.Type()));
                 return false;
             }
-            auto type_str = node["type"].as<std::string>();
-            if (gStrToInferCompType.end() == gStrToInferCompType.find(type_str))
+            auto infer_type_str = node["type"].as<std::string>();
+            DslPipelineServer::InferCompType infer_type;
+            if (0 != DslPipelineServer::convertStrToInferCompType(infer_type_str, infer_type))
             {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid infer component type {}, please check", type_str);
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component: {} have invalid infer component type: {}", 
+                    comp_name, infer_type_str);
                 return false;
             }
-            auto type = gStrToInferCompType[type_str];
-            rhs.type = type;
-            switch (rhs.type)
+            rhs.infer_type = infer_type;
+            switch (rhs.infer_type)
             {
                 case DslPipelineServer::PRIMARY_GIE_INFER_COMP_TYPE:
                 {
-                    rhs.primary_gie_config = node["config"].as<PrimaryGieInferCompConfig>();
+                    rhs.primary_gie_config = node.as<PrimaryGieInferCompConfig>();
                     break;
                 }
                 case DslPipelineServer::SECONDARY_GIE_INFER_COMP_TYPE:
                 {
-                    rhs.secondary_gie_config = node["config"].as<SecondaryGieInferCompConfig>();
+                    rhs.secondary_gie_config = node.as<SecondaryGieInferCompConfig>();
                     break;
                 }
                 case DslPipelineServer::PRIMARY_TIS_INFER_COMP_TYPE:
                 {
-                    rhs.primary_tis_config = node["config"].as<PrimaryTisInferCompConfig>();
+                    rhs.primary_tis_config = node.as<PrimaryTisInferCompConfig>();
                     break;
                 }
                 case DslPipelineServer::SECONDARY_TIS_INFER_COMP_TYPE:
                 {
-                    rhs.secondary_tis_config = node["config"].as<SecondaryTisInferCompConfig>();
+                    rhs.secondary_tis_config = node.as<SecondaryTisInferCompConfig>();
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid infer component type: {}", int(rhs.type));
+                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component: {} invalid infer component type: {}", 
+                        comp_name, infer_type_str);
                     return false;
                 }
             }
@@ -252,7 +263,7 @@ namespace DslPipelineServer
         {
             auto type = it->first;
             auto type_str = it->second;
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", type, type_str);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", int(type), type_str);
         }
         return;
     }
@@ -275,32 +286,16 @@ namespace DslPipelineServer
         return 0;
     }
 
-    int parseInferCompConfigFromNode(const YAML::Node& node, InferCompConfig& config)
+    void parseInferCompConfigFromNode(const YAML::Node& node, InferCompConfig& config)
     {
-        try
-        {
-            config = node["config"].as<InferCompConfig>();
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse infer component node error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        config = node.as<InferCompConfig>();
+        return;
     }
 
-    int dumpInferCompConfigToNode(const InferCompConfig& config, YAML::Node& node)
+    void dumpInferCompConfigToNode(const InferCompConfig& config, YAML::Node& node)
     {
-        try
-        {
-            node["config"] = config;
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "dump infer component config error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        node = config;
+        return;
     }
 
 } // namespace DslPipelineServer

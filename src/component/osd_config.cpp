@@ -49,32 +49,16 @@ namespace YAML
 namespace DslPipelineServer
 {
 
-    int parseOsdCompConfigFromNode(const YAML::Node& node, OsdCompConfig& config)
+    void parseOsdCompConfigFromNode(const YAML::Node& node, OsdCompConfig& config)
     {
-        try
-        {
-            config = node["config"].as<OsdCompConfig>();
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse osd component node error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        config = node.as<OsdCompConfig>();
+        return;
     }
 
-    int dumpOsdCompConfigToNode(const OsdCompConfig& config, YAML::Node& node)
+    void dumpOsdCompConfigToNode(const OsdCompConfig& config, YAML::Node& node)
     {
-        try
-        {
-            node["config"] = config;
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "dump osd component config error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        node = config;
+        return;
     }
 
 } // namespace DslPipelineServer

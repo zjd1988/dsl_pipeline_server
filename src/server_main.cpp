@@ -5,7 +5,7 @@
 
 ********************************************/
 #include <iostream>
-#include "cxxopts/cxxopts.hpp"
+#include "cxxopts.hpp"
 #include "ghc/filesystem.h"
 #include "common/logger.h"
 #include "common/server_config.h"
@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
         ("log_level", "dsl pipeline server log level, for example: TRACE = 0, DEBUG = 1 INFO = 2, WARN = 3, ERROR = 4, FATAL = 5",
             cxxopts::value<int>()->default_value("2"))
         ("ip_addr", "dsl pipeline server listen ip, default is 0.0.0.0", cxxopts::value<std::string>()->default_value("0.0.0.0"))
-        ("port_num", "dsl pipeline server bind port, default is 12345", cxxopts::value<int>()->default_value(12345))
-        ("thread_num", "dsl pipeline server thread num, default is 1", cxxopts::value<int>()->default_value(1))
+        ("port_num", "dsl pipeline server bind port, default is 12345", cxxopts::value<int>()->default_value("12345"))
+        ("thread_num", "dsl pipeline server thread num, default is 1", cxxopts::value<int>()->default_value("1"))
         // help
         ("help", "print usage");
     arg_options.allow_unrecognised_options();
@@ -72,11 +72,12 @@ int main(int argc, char* argv[])
     config.port_num = server_port_num;
     config.thread_num = server_thread_num;
     std::unique_ptr<DslPipelineServer::PipelineServer> pipeline_server(new DslPipelineServer::PipelineServer(config));
-    if (null_ptr == pipeline_server.get())
+    if (nullptr == pipeline_server.get())
     {
         PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "init pipeline server fail");
         goto FINAL;
     }
+
     if (0 != pipeline_server->startServer())
     {
         PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "start pipeline server fail");

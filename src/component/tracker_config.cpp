@@ -47,32 +47,17 @@ namespace YAML
 namespace DslPipelineServer
 {
 
-    int parseTrackerCompConfigFromNode(const YAML::Node& node, TrackerCompConfig& config)
+    void parseTrackerCompConfigFromNode(const YAML::Node& node, TrackerCompConfig& config)
     {
-        try
-        {
-            config = node["config"].as<TrackerCompConfig>();
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse tracker component node error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        config = node.as<TrackerCompConfig>();
+        return;
     }
 
-    int dumpTrackerCompConfigToNode(const TrackerCompConfig& config, YAML::Node& node)
+    void dumpTrackerCompConfigToNode(const TrackerCompConfig& config, YAML::Node& node)
     {
-        try
-        {
-            node["config"] = config;
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "dump tracker component config error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+
+        node = config;
+        return;
     }
 
 } // namespace DslPipelineServer

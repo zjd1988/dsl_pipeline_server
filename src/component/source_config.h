@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <yaml-cpp/yaml.h>
+#include "component/base_config.h"
 
 namespace DslPipelineServer
 {
@@ -78,25 +79,22 @@ namespace DslPipelineServer
         uint32_t                                        timeout;              // maximum time between successive frame buffers in units of seconds before initiating a "reconnection-cycle". Set to 0 to disable the timeout.
     } RtspSourceCompConfig;
 
-    typedef struct SourceCompConfig
+    typedef struct SourceCompConfig : public BaseCompConfig
     {
-        SourceCompType                                  type;
-        union
-        {
-            AppSourceCompConfig                         app_config;
-            CsiSourceCompConfig                         csi_config;
-            V4l2SourceCompConfig                        v4l2_config;
-            UriSourceCompConfig                         uri_config;
-            FileSourceCompConfig                        file_config;
-            RtspSourceCompConfig                        rtsp_config;
-        };
+        SourceCompType                                  source_type;
+        AppSourceCompConfig                             app_config;
+        CsiSourceCompConfig                             csi_config;
+        V4l2SourceCompConfig                            v4l2_config;
+        UriSourceCompConfig                             uri_config;
+        FileSourceCompConfig                            file_config;
+        RtspSourceCompConfig                            rtsp_config;
     } SourceCompConfig;
 
     void logValidSourceCompType();
     int convertStrToSourceCompType(const std::string type_str, SourceCompType& type);
     int convertSourceCompTypeToStr(const SourceCompType type, std::string& type_str);
-    int parseSourceCompConfigFromNode(const YAML::Node& node, SourceCompConfig& config);
-    int dumpSourceCompConfigToNode(const SourceCompConfig& config, YAML::Node& node);
+    void parseSourceCompConfigFromNode(const YAML::Node& node, SourceCompConfig& config);
+    void dumpSourceCompConfigToNode(const SourceCompConfig& config, YAML::Node& node);
     extern std::map<std::string, SourceCompType> gStrToSourceCompType;
     extern std::map<SourceCompType, std::string> gSourceCompTypeToStr;
 

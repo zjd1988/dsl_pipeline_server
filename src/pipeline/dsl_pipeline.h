@@ -15,7 +15,7 @@ namespace DslPipelineServer
     class DslPipeline : public NonCopyable
     {
     public:
-        DslPipeline(const PipelineConfig& config);
+        DslPipeline(const PipelineConfig& config, const std::string name = "");
         ~DslPipeline();
         bool getInitFlag() { return m_init_flag; }
 

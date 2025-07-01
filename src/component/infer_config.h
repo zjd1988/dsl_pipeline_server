@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <yaml-cpp/yaml.h>
+#include "component/base_config.h"
 
 namespace DslPipelineServer
 {
@@ -51,23 +52,20 @@ namespace DslPipelineServer
         uint32_t                                        interval;        // frame interval to infer on
     } SecondaryTisInferCompConfig;
 
-    typedef struct InferCompConfig
+    typedef struct InferCompConfig : public BaseCompConfig
     {
-        InferCompType                                   type;
-        union
-        {
-            PrimaryGieInferCompConfig                   primary_gie_config;
-            SecondaryGieInferCompConfig                 secondary_gie_config;
-            PrimaryTisInferCompConfig                   primary_tis_config;
-            SecondaryTisInferCompConfig                 secondary_tis_config;
-        };
+        InferCompType                                   infer_type;
+        PrimaryGieInferCompConfig                       primary_gie_config;
+        SecondaryGieInferCompConfig                     secondary_gie_config;
+        PrimaryTisInferCompConfig                       primary_tis_config;
+        SecondaryTisInferCompConfig                     secondary_tis_config;
     } InferCompConfig;
 
     void logValidInferCompType();
     int convertStrToInferCompType(const std::string type_str, InferCompType& type);
     int convertInferCompTypeToStr(const InferCompType type, std::string& type_str);
-    int parseInferCompConfigFromNode(const YAML::Node& node, InferCompConfig& config);
-    int dumpInferCompConfigToNode(const InferCompConfig& config, YAML::Node& node);
+    void parseInferCompConfigFromNode(const YAML::Node& node, InferCompConfig& config);
+    void dumpInferCompConfigToNode(const InferCompConfig& config, YAML::Node& node);
     extern std::map<std::string, InferCompType> gStrToInferCompType;
     extern std::map<InferCompType, std::string> gInferCompTypeToStr;
 

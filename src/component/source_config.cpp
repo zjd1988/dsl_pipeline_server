@@ -88,7 +88,7 @@ namespace YAML
         static Node encode(const V4l2SourceCompConfig& rhs)
         {
             Node node;
-            node["device_location"] = rhs.uri;
+            node["device_location"] = rhs.device_location;
             return node;
         }
 
@@ -215,44 +215,52 @@ namespace YAML
 
         static Node encode(const SourceCompConfig& rhs)
         {
+            std::string source_type_str;
+            if (0 != DslPipelineServer::convertSourceCompTypeToStr(rhs.source_type, source_type_str))
+            {
+                std::string err_str = fmt::format("component: {} have invalid source component type: {}", 
+                    rhs.comp_name, int(rhs.source_type));
+                throw DslPipelineServer::ParseException(err_str);
+            }
             Node node;
-            node["type"] = rhs.type;
-            switch (rhs.type)
+            node["type"] = source_type_str;
+            switch (rhs.source_type)
             {
                 case DslPipelineServer::APP_SOURCE_COMP_TYPE:
                 {
-                    node["config"] = rhs.app_config;
+                    node = rhs.app_config;
                     break;
                 }
                 case DslPipelineServer::CSI_SOURCE_COMP_TYPE:
                 {
-                    node["config"] = rhs.csi_config;
+                    node = rhs.csi_config;
                     break;
                 }
                 case DslPipelineServer::V4L2_SOURCE_COMP_TYPE:
                 {
-                    node["config"] = rhs.v4l2_config;
+                    node = rhs.v4l2_config;
                     break;
                 }
                 case DslPipelineServer::URI_SOURCE_COMP_TYPE:
                 {
-                    node["config"] = rhs.uri_config;
+                    node = rhs.uri_config;
                     break;
                 }
                 case DslPipelineServer::FILE_SOURCE_COMP_TYPE:
                 {
-                    node["config"] = rhs.file_config;
+                    node = rhs.file_config;
                     break;
                 }
                 case DslPipelineServer::RTSP_SOURCE_COMP_TYPE:
                 {
-                    node["config"] = rhs.rtsp_config;
+                    node = rhs.rtsp_config;
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid source component type: {}", int(rhs.type));
-                    break;
+                    std::string err_str = fmt::format("component: {} have invalid source component type: {}", 
+                        rhs.comp_name, int(rhs.source_type));
+                    throw DslPipelineServer::ParseException(err_str);
                 }
             }
             return node;
@@ -260,55 +268,58 @@ namespace YAML
 
         static bool decode(const Node& node, SourceCompConfig& rhs)
         {
+            auto comp_name = rhs.comp_name;
             if (!node.IsMap())
             {
                 PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "expect SourceCompConfig node type is map:{}, but get {}", 
                     int(NodeType::Map), int(node.Type()));
                 return false;
             }
-            auto type_str = node["type"].as<std::string>();
-            if (gStrToSourceCompType.end() == gStrToSourceCompType.find(type_str))
+            auto source_type_str = node["type"].as<std::string>();
+            DslPipelineServer::SourceCompType source_type;
+            if (0 != DslPipelineServer::convertStrToSourceCompType(source_type_str, source_type))
             {
-                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid source component type {}, please check", type_str);
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component: {} have invalid source component type: {}", 
+                    comp_name, source_type_str);
                 return false;
             }
-            auto type = gStrToSourceCompType[type_str];
-            rhs.type = type;
-            switch (rhs.type)
+            rhs.source_type = source_type;
+            switch (rhs.source_type)
             {
                 case DslPipelineServer::APP_SOURCE_COMP_TYPE:
                 {
-                    rhs.app_config = node["config"].as<AppSourceCompConfig>();
+                    rhs.app_config = node.as<AppSourceCompConfig>();
                     break;
                 }
                 case DslPipelineServer::CSI_SOURCE_COMP_TYPE:
                 {
-                    rhs.csi_config = node["config"].as<CsiSourceCompConfig>();
+                    rhs.csi_config = node.as<CsiSourceCompConfig>();
                     break;
                 }
                 case DslPipelineServer::V4L2_SOURCE_COMP_TYPE:
                 {
-                    rhs.v4l2_config = node["config"].as<V4l2SourceCompConfig>();
+                    rhs.v4l2_config = node.as<V4l2SourceCompConfig>();
                     break;
                 }
                 case DslPipelineServer::URI_SOURCE_COMP_TYPE:
                 {
-                    rhs.uri_config = node["config"].as<UriSourceCompConfig>();
+                    rhs.uri_config = node.as<UriSourceCompConfig>();
                     break;
                 }
                 case DslPipelineServer::FILE_SOURCE_COMP_TYPE:
                 {
-                    rhs.file_config = node["config"].as<FileSourceCompConfig>();
+                    rhs.file_config = node.as<FileSourceCompConfig>();
                     break;
                 }
                 case DslPipelineServer::RTSP_SOURCE_COMP_TYPE:
                 {
-                    rhs.rtsp_config = node["config"].as<RtspSourceCompConfig>();
+                    rhs.rtsp_config = node.as<RtspSourceCompConfig>();
                     break;
                 }
                 default:
                 {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "invalid source component type: {}", int(rhs.type));
+                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component: {} invalid source component type: {}", 
+                        comp_name, source_type_str);
                     return false;
                 }
             }
@@ -348,7 +359,7 @@ namespace DslPipelineServer
         {
             auto type = it->first;
             auto type_str = it->second;
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", type, type_str);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "{} ----> {}", int(type), type_str);
         }
         return;
     }
@@ -371,32 +382,17 @@ namespace DslPipelineServer
         return 0;
     }
 
-    int parseSourceCompConfigFromNode(const YAML::Node& node, SourceCompConfig& config)
+    void parseSourceCompConfigFromNode(const YAML::Node& node, SourceCompConfig& config)
     {
-        try
-        {
-            config = node["config"].as<SourceCompConfig>();
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse source component node error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+        config = node.as<SourceCompConfig>();
+        return;
     }
 
-    int dumpSourceCompConfigToNode(const SourceCompConfig& config, YAML::Node& node)
+    void dumpSourceCompConfigToNode(const SourceCompConfig& config, YAML::Node& node)
     {
-        try
-        {
-            node["config"] = config;
-        }
-        catch (const std::exception &e)
-        {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "dump source component config error:\n {}", e.what());
-            return -1;
-        }
-        return 0;
+
+        node = config;
+        return;
     }
 
 } // namespace DslPipelineServer
