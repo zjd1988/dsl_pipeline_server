@@ -6,6 +6,7 @@
 ********************************************/
 #pragma once
 #include <glib.h>
+#include "DslApi.h"
 #include <functional>
 #include <iostream>
 #include "common/non_copyable.h"
@@ -13,65 +14,47 @@
 namespace DslPipelineServer
 {
 
+    typedef struct DslThreadMetaData
+    {
+        std::wstring pipeline;
+        std::vector<std::wstring> components;
+    } DslThreadMetaData;
+
     class DslThread : public NonCopyable
     {
     public:
-        using ThreadFunction = std::function<void()>;
-        DslThread(ThreadFunction func) : threadFunc(func), threadId(nullptr) {}
-
-        void start()
-        {
-            if (threadId)
-            {
-                std::cerr << "Thread already started!" << std::endl;
-                return;
-            }
-
-            threadId = g_thread_new("DslThread", threadFuncWrapper, this);
-            if (!threadId)
-            {
-                std::cerr << "Failed to create thread!" << std::endl;
-            }
-        }
-
-        void join()
-        {
-            if (!threadId)
-            {
-                std::cerr << "Thread not started or already joined!" << std::endl;
-                return;
-            }
-
-            g_thread_join(threadId);
-            threadId = nullptr;
-        }
-
-        bool isRunning() const
-        {
-            return threadId != nullptr;
-        }
-
-        ~DslThread()
-        {
-            if (threadId) {
-                std::cerr << "Thread not joined, calling join in destructor." << std::endl;
-                join();
-            }
-        }
+        DslThread(const std::string pipeline, const std::vector<std::string>& components);
+        void startPipeline();
+        void stopPipeline();
+        bool isRunning();
+        ~DslThread();
 
     private:
-        ThreadFunction threadFunc;
-        GThread* threadId;
+        DslReturnType deletePipeline(DslThreadMetaData& metadata);
 
-        static gpointer threadFuncWrapper(gpointer data)
+    private:
+        static gpointer threadFunc(gpointer data)
         {
-            DslThread* wrapper = static_cast<DslThread*>(data);
-            if (wrapper && wrapper->threadFunc)
-            {
-                wrapper->threadFunc();
-            }
+            DslThread* dsl_thread = static_cast<DslThread*>(data);
+
+            auto& metadata = dsl_thread->m_thread_meta;
+            // Play the pipeline
+            DslReturnType retval = dsl_pipeline_play(metadata.pipeline.c_str());
+            if (retval != DSL_RESULT_SUCCESS)
+                return nullptr;
+
+            // blocking call
+            dsl_pipeline_main_loop_run(metadata.pipeline.c_str());
+            dsl_thread->deletePipeline(metadata);
             return nullptr;
         }
+        
+
+    private:
+        GThread*                            m_thread_id;
+        std::string                         m_thread_name;
+        std::vector<std::wstring>           m_components;
+        DslThreadMetaData                   m_thread_meta;
     };
 
 } // namespace DslPipelineServer

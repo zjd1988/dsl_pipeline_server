@@ -16,6 +16,7 @@
 #include <vector>
 #include "common/uuid.h"
 
+// borrow from https://github.com/modelscope/dash-infer/blob/main/csrc/utility/uuid.cpp
 #define UUID_SEQ_DEBUG 1  // use 0,1,2,3... sequence instead uuid
 
 namespace DslPipelineServer

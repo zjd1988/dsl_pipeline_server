@@ -4,27 +4,16 @@
 // Description:
 
 ********************************************/
-#include <locale>
-#include <codecvt>
-#include "DslApi.h"
 #include "common/logger.h"
+#include "common/dsl_common.h"
 #include "pipeline/dsl_pipeline.h"
 
 namespace DslPipelineServer
 {
 
-    static std::wstring convertStrToWStr(const std::string& str)
-    {
-        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-        std::wstring wide_str = converter.from_bytes(str);
-        return wide_str;
-    }
-
     DslPipeline::DslPipeline(const PipelineConfig& config, const std::string name)
     {
-        m_name = config.name;
-        if ("" != name)
-            m_name = name;
+        m_name = ("" != name) ? name : config.name;
         if (0 != createComponents(config))
             return;
         m_init_flag = true;

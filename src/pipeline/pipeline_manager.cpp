@@ -9,6 +9,7 @@
 #include <chrono>
 #include <functional>
 #include <sstream>
+#include <glib.h>
 #include "DslApi.h"
 #include "common/logger.h"
 #include "common/uuid.h"
