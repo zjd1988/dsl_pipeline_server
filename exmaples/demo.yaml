@@ -1,0 +1,35 @@
+components:
+  - name: "demo-source"
+    type: "source"
+    config: 
+      type: "file_source"
+      file_path: ""
+      repeat_enabled: false
+
+  - name: "demo-primary-tis"
+    type: "infer"
+    config: 
+      type: "primary_tis"
+      infer_config_file: ""
+      interval: 0
+
+  - name: "demo-iou-tracker"
+    type: "tracker"
+    config: 
+      config_file: ""
+      width: 480
+      height: 272
+
+  - name: "demo-on-screen-display"
+    type: "osd"
+    config: 
+      text_enabled: true
+      clock_enabled: true
+      bbox_enabled: true
+      mask_enabled: false
+
+  - name: "demo-rtsp-sink"
+    type: "sink"
+    config: 
+      type: "rtsp_server"
+

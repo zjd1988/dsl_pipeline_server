@@ -57,16 +57,31 @@ file(GLOB COMMON_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp)
 file(GLOB COMPONENT_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/component/*.cpp)
 file(GLOB PIPELINE_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/pipeline/*.cpp)
 file(GLOB SERVER_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/server/*.cpp)
+set(PROJECT_SRC_FILES ${COMMON_SRC_FILES} ${COMPONENT_SRC_FILES} ${PIPELINE_SRC_FILES} ${SERVER_SRC_FILES})
+
+# dsl pipeline lib
+set(PROJECT_LIBS yaml-cpp hv dsl ${GLIB_LIBRARIES})
+add_library(dsl_pipeline ${PROJECT_SRC_FILES})
+target_include_directories(dsl_pipeline PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${PROJECT_INCLUDE_DIRS})
+target_link_libraries(dsl_pipeline ${PROJECT_LIBS})
+
+# set project libs
+set(PROJECT_LIBS ${PROJECT_LIBS} dsl_pipeline)
 
 # server app
-add_executable(pipeline_server ${COMMON_SRC_FILES}
-    ${COMPONENT_SRC_FILES}
-    ${PIPELINE_SRC_FILES}
-    ${SERVER_SRC_FILES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/server_main.cpp)
-
+add_executable(pipeline_server ${CMAKE_CURRENT_SOURCE_DIR}/src/server_main.cpp)
 target_include_directories(pipeline_server PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${PROJECT_INCLUDE_DIRS})
 target_link_directories(pipeline_server PRIVATE ${PROJECT_LIB_DIRS})
-target_link_libraries(pipeline_server yaml-cpp hv dsl ${GLIB_LIBRARIES})
+target_link_libraries(pipeline_server ${PROJECT_LIBS})
+
+# pipeline test
+add_executable(pipeline_test ${CMAKE_CURRENT_SOURCE_DIR}/exmaples/pipeline_test.cpp)
+target_include_directories(pipeline_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${PROJECT_INCLUDE_DIRS})
+target_link_directories(pipeline_test PRIVATE ${PROJECT_LIB_DIRS})
+target_link_libraries(pipeline_test ${PROJECT_LIBS})
