@@ -24,7 +24,7 @@ namespace DslPipelineServer
     {
     public:
         DslThread(const std::string pipeline, const std::vector<std::string>& components);
-        void startPipeline();
+        bool startPipeline();
         void stopPipeline();
         bool isRunning();
         ~DslThread();

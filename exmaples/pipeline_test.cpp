@@ -26,12 +26,12 @@ int main(int argc, char* argv[])
     int log_level;
     std::string config_file;
 
-    cxxopts::Options arg_options("./dsl_pipeline_server", "dsl pipeline server");
+    cxxopts::Options arg_options("./pipeline_test", "pipeline test");
     arg_options.add_options()
         ("log_path", "dsl pipeline test log path", cxxopts::value<std::string>()->default_value(""))
         ("log_level", "dsl pipeline test log level, for example: TRACE = 0, DEBUG = 1 INFO = 2, WARN = 3, ERROR = 4, FATAL = 5",
             cxxopts::value<int>()->default_value("2"))
-        ("config_file", "dsl pipeline test config file")
+        ("config_file", "dsl pipeline test config file", cxxopts::value<std::string>())
         // help
         ("help", "print usage");
     arg_options.allow_unrecognised_options();
@@ -88,6 +88,7 @@ FINAL:
         pipeline_manager.reset();
     }
 
+    // 8 stop logger
     DslPipelineServer::PipelineLogger::Instance().stopPipelineLogger();
     return 0;
 }

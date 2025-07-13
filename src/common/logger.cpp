@@ -44,10 +44,8 @@ namespace DslPipelineServer
             log_file_size = 10 * 1024 * 1024; // 10MB
         int num_log_files = LOG_FILE_NUM;
             num_log_files = 3;
-        if (file_name.empty())
-            file_name = "tracker_algo.log";
-        std::string logger_name = "DSL_PIPELINE";
 
+        std::string logger_name = "DSL_PIPELINE";
         std::cout << "log level: " << log_level << std::endl;
         std::cout << "logger name: " << logger_name << std::endl;
         std::cout << "log file path: " << file_name << std::endl;
@@ -76,7 +74,11 @@ namespace DslPipelineServer
 
     void PipelineLogger::stopPipelineLogger()
     {
-        spdlog::shutdown();
+        if (nullptr != m_logger.get())
+        {
+            spdlog::shutdown();
+            m_logger.reset();
+        }
     }
 
     PipelineLogger::~PipelineLogger()

@@ -26,6 +26,7 @@ namespace YAML
         static Node encode(const PipelineConfig& rhs)
         {
             Node node;
+            node["name"] = rhs.name;
             node["components"] = YAML::Node();
             for (size_t index = 0; index < rhs.component_configs.size(); index++)
             {
@@ -89,6 +90,8 @@ namespace YAML
                     int(NodeType::Map), int(node.Type()));
                 return false;
             }
+            if (node["name"])
+                rhs.name = node["name"].as<std::string>();
             if (node["components"] && node["components"].IsSequence())
             {
                 for (const auto& component_node : node["components"])
@@ -107,10 +110,7 @@ namespace YAML
                         PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "component {} has invalid component type: {}", name, type_str);
                         return false;
                     }
-                    int ret = 0;
                     std::shared_ptr<BaseCompConfig> config;
-                    config->comp_name = name;
-                    config->comp_type = type;
                     auto& config_node = component_node["config"];
                     switch (type)
                     {
@@ -122,34 +122,37 @@ namespace YAML
                         }
                         case DslPipelineServer::INFER_COMPONENT_TYPE:
                         {
+                            config.reset(new InferCompConfig());
                             parseInferCompConfigFromNode(config_node, *(InferCompConfig*)config.get());
                             break;
                         }
                         case DslPipelineServer::TRACKER_COMPONENT_TYPE:
                         {
+                            config.reset(new TrackerCompConfig());
                             parseTrackerCompConfigFromNode(config_node, *(TrackerCompConfig*)config.get());
                             break;
                         }
                         case DslPipelineServer::OSD_COMPONENT_TYPE:
                         {
+                            config.reset(new OsdCompConfig());
                             parseOsdCompConfigFromNode(config_node, *(OsdCompConfig*)config.get());
                             break;
                         }
                         case DslPipelineServer::SINK_COMPONENT_TYPE:
                         {
+                            config.reset(new SinkCompConfig());
                             parseSinkCompConfigFromNode(config_node, *(SinkCompConfig*)config.get());
                             break;
                         }
                         default:
                         {
                             PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "current not support component type: {}", type_str);
-                            break;
+                            return false;
                         }
                     }
-                    if (0 == ret)
-                        rhs.component_configs.push_back(config);
-                    else
-                        PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "parse component: {} fail", name);
+                    config->comp_name = name;
+                    config->comp_type = type;
+                    rhs.component_configs.push_back(config);
                 }
             }
             return true;

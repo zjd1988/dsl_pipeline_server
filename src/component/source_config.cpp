@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include "common/logger.h"
+#include "common/pystring.h"
 #include "component/source_config.h"
 
 namespace YAML
@@ -366,10 +367,11 @@ namespace DslPipelineServer
 
     int convertStrToSourceCompType(const std::string type_str, SourceCompType& type)
     {
-        if (gStrToSourceCompType.end() == gStrToSourceCompType.find(type_str))
+        std::string upper_str = pystring::upper(type_str);
+        if (gStrToSourceCompType.end() == gStrToSourceCompType.find(upper_str))
             return -1;
 
-        type = gStrToSourceCompType[type_str];
+        type = gStrToSourceCompType[upper_str];
         return 0;
     }
 
@@ -390,7 +392,6 @@ namespace DslPipelineServer
 
     void dumpSourceCompConfigToNode(const SourceCompConfig& config, YAML::Node& node)
     {
-
         node = config;
         return;
     }

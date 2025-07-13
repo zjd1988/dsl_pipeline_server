@@ -55,7 +55,6 @@ namespace DslPipelineServer
 
     void dumpTrackerCompConfigToNode(const TrackerCompConfig& config, YAML::Node& node)
     {
-
         node = config;
         return;
     }

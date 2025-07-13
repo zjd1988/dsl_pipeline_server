@@ -4,7 +4,6 @@
 // Description:
 
 ********************************************/
-#include <thread>
 #include "server/pipeline_server.h"
 #include "pipeline/pipeline_manager.h"
 

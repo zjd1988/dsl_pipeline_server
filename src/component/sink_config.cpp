@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include "common/logger.h"
+#include "common/pystring.h"
 #include "component/sink_config.h"
 
 namespace YAML
@@ -407,10 +408,11 @@ namespace DslPipelineServer
 
     int convertStrToSinkCompType(const std::string type_str, SinkCompType& type)
     {
-        if (gStrToSinkCompType.end() == gStrToSinkCompType.find(type_str))
+        std::string upper_str = pystring::upper(type_str);
+        if (gStrToSinkCompType.end() == gStrToSinkCompType.find(upper_str))
             return -1;
 
-        type = gStrToSinkCompType[type_str];
+        type = gStrToSinkCompType[upper_str];
         return 0;
     }
 

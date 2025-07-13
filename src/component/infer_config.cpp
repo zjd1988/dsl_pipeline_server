@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include "common/logger.h"
+#include "common/pystring.h"
 #include "component/infer_config.h"
 
 namespace YAML
@@ -270,10 +271,11 @@ namespace DslPipelineServer
 
     int convertStrToInferCompType(const std::string type_str, InferCompType& type)
     {
-        if (gStrToInferCompType.end() == gStrToInferCompType.find(type_str))
+        std::string upper_str = pystring::upper(type_str);
+        if (gStrToInferCompType.end() == gStrToInferCompType.find(upper_str))
             return -1;
 
-        type = gStrToInferCompType[type_str];
+        type = gStrToInferCompType[upper_str];
         return 0;
     }
 

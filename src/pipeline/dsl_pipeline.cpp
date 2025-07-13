@@ -14,13 +14,78 @@ namespace DslPipelineServer
     DslPipeline::DslPipeline(const PipelineConfig& config, const std::string name)
     {
         m_name = ("" != name) ? name : config.name;
-        if (0 != createComponents(config))
+        std::vector<std::string> comp_names;
+        if (0 != createComponents(config, comp_names))
             return;
+
+        m_event_loop_exit.store(false);
+        m_even_loop_thread = std::make_unique<std::thread>(std::bind(&DslPipeline::eventLoop, this));
+        if (nullptr == m_even_loop_thread.get())
+        {
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "pipeline {} init event loop thread fail", m_name);
+            return;
+        }
+        m_event_queue.appendListener(EVENT_NONE, std::bind(&DslPipeline::noneEventProcess, this));
+        m_event_queue.appendListener(EVENT_STOP, std::bind(&DslPipeline::stopEventProcess, this));
+        m_event_queue.appendListener(EVENT_EOS, std::bind(&DslPipeline::eosEventProcess, this));
+
+        m_dsl_thread.reset(new DslThread(m_name, comp_names));
+        if (nullptr == m_dsl_thread.get() || false == m_dsl_thread->startPipeline())
+            return;
+
         m_init_flag = true;
     }
 
     DslPipeline::~DslPipeline()
     {
+        if (nullptr != m_even_loop_thread.get())
+        {
+            m_event_queue.enqueue(EVENT_STOP);
+            m_event_loop_exit.store(true);
+            m_event_queue.enqueue(EVENT_NONE);
+            m_even_loop_thread->join();
+        }
+        return;
+    }
+
+    void DslPipeline::sendEosEventToLoop()
+    {
+        m_event_queue.enqueue(EVENT_EOS);
+        return;
+    }
+
+    void DslPipeline::eventLoop()
+    {
+        while (!m_event_loop_exit.load())
+        {
+            m_event_queue.wait();
+            m_event_queue.process();
+        }
+    }
+
+    void DslPipeline::noneEventProcess()
+    {
+        PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "pipeline {} event loop receive none event", m_name);
+        return;
+    }
+
+    void DslPipeline::stopEventProcess()
+    {
+        PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "pipeline {} event loop receive stop event", m_name);
+        // std::wstring w_name = convertStrToWStr(m_name);
+        // dsl_pipeline_stop(w_name.c_str());
+        // dsl_pipeline_main_loop_quit(w_name.c_str());
+        m_dsl_thread->stopPipeline();
+        return;
+    }
+
+    void DslPipeline::eosEventProcess()
+    {
+        PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "pipeline {} event loop receive eos event", m_name);
+        m_dsl_thread->stopPipeline();
+        // std::wstring w_name = convertStrToWStr(m_name);
+        // dsl_pipeline_stop(w_name.c_str());
+        // dsl_pipeline_main_loop_quit(w_name.c_str());
         return;
     }
 
@@ -262,9 +327,42 @@ namespace DslPipelineServer
         return ret;
     }
 
-    int DslPipeline::createComponents(const PipelineConfig& config)
+    // 
+    // Function to be called on End-of-Stream (EOS) event
+    // 
+    static void eos_event_listener(void* client_data)
+    {
+        DslPipeline* pipeline = (DslPipeline*)client_data;
+        std::string pipeline_name = pipeline->getPipelineName();
+        PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "pipeline: {} receive eos event and send to event loop", pipeline_name);
+        pipeline->sendEosEventToLoop();
+        // quiting the main loop will allow the pipeline thread to 
+        // stop and delete the pipeline and its components
+        // dsl_pipeline_stop(c_data->pipeline.c_str());
+        // dsl_pipeline_main_loop_quit(c_data->pipeline.c_str());
+        return;
+    }    
+
+    // 
+    // Function to be called on every change of Pipeline state
+    // 
+    static void state_change_listener(uint old_state, uint new_state, void* client_data)
+    {
+        DslPipeline* pipeline = (DslPipeline*)client_data;
+        std::string pipeline_name = pipeline->getPipelineName();
+        std::wstring w_old_state = dsl_state_value_to_string(old_state);
+        std::wstring w_new_state = dsl_state_value_to_string(new_state);
+        PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "pipeline: {}, previous state = {}, new state = {}", pipeline_name, 
+            convertWStrToStr(w_old_state), convertWStrToStr(w_new_state));
+        return;
+    }
+
+    int DslPipeline::createComponents(const PipelineConfig& config, std::vector<std::string>& comp_names)
     {
         int ret = 0;
+        std::string pipeline_name = config.name;
+        std::wstring w_pipline_name = convertStrToWStr(pipeline_name);
+        std::vector<std::wstring> w_comp_names;
         for (size_t index = 0; index < config.component_configs.size(); index++)
         {
             auto& comp_config = config.component_configs[index];
@@ -277,6 +375,7 @@ namespace DslPipelineServer
                 logValidPipelineCompType();
                 return -1;
             }
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "pipeline {} try to create component {}", pipeline_name, comp_name);
             switch (comp_type)
             {
                 case SOURCE_COMPONENT_TYPE:
@@ -313,8 +412,45 @@ namespace DslPipelineServer
             if (0 != ret)
             {
                 PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "create component: {} fail", comp_name);
-                break;
+                return -1;
             }
+            comp_names.emplace_back(comp_name);
+            w_comp_names.emplace_back(convertStrToWStr(comp_name));
+        }
+        size_t comp_num = comp_names.size();
+        std::vector<const wchar_t*> component_names;
+        for (size_t index = 0; index < comp_num; index++)
+        {
+            component_names.push_back(w_comp_names[index].c_str());
+        }
+        component_names.push_back(nullptr);
+        auto ret_val = dsl_pipeline_new_component_add_many(w_pipline_name.c_str(), &component_names[0]);
+        if (ret_val != DSL_RESULT_SUCCESS)
+        {
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "pipeline {} add components fail", pipeline_name);
+            return -1;
+        }
+        // Add the listener callback functions defined above
+        ret_val = dsl_pipeline_state_change_listener_add(w_pipline_name.c_str(), state_change_listener, (void*)this);
+        if (ret_val != DSL_RESULT_SUCCESS)
+        {
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "pipeline {} add state change callback fail", pipeline_name);
+            return -1;
+        }
+        ret_val = dsl_pipeline_eos_listener_add(w_pipline_name.c_str(), eos_event_listener, (void*)this);
+        if (ret_val != DSL_RESULT_SUCCESS)
+        {
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "pipeline {} add state change callback fail", pipeline_name);
+            return -1;
+        }
+        // Tell the Pipeline to create its own main-context and main-loop that
+        // will be set as the default main-context for the main_loop_thread_func
+        // defined below once it is run. 
+        ret_val = dsl_pipeline_main_loop_new(w_pipline_name.c_str());
+        if (ret_val != DSL_RESULT_SUCCESS)
+        {
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "pipeline {} new main loop fail", pipeline_name);
+            return -1;
         }
         return ret;
     }

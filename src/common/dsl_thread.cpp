@@ -24,27 +24,28 @@ namespace DslPipelineServer
         return;
     }
 
-    void DslThread::startPipeline()
+    bool DslThread::startPipeline()
     {
         if (m_thread_id)
         {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_WARN, "{} thread already started!", m_thread_name);
-            return;
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_WARN, "pipeline {} thread already started!", m_thread_name);
+            return false;
         }
 
         m_thread_id = g_thread_new(m_thread_name.c_str(), threadFunc, this);
         if (!m_thread_id)
         {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "failed to create {} thread!", m_thread_name);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "failed to create pipeline {} thread!", m_thread_name);
+            return false;
         }
-        return;
+        return true;
     }
 
     void DslThread::stopPipeline()
     {
         if (!m_thread_id)
         {
-            PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "{} thread not started or already joined!", m_thread_name);
+            PIPELINE_LOG(PIPELINE_LOG_LEVEL_WARN, "{} thread not started or already joined!", m_thread_name);
             return;
         }
         dsl_pipeline_stop(m_thread_meta.pipeline.c_str());
@@ -88,6 +89,7 @@ namespace DslPipelineServer
         {
             component_names.push_back(metadata.components[index].c_str());
         }
+        component_names.push_back(nullptr);
         retval = dsl_component_delete_many(&component_names[0]);
         if (retval != DSL_RESULT_SUCCESS)
             return retval;

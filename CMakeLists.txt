@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(dsl_pipeline_server)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
@@ -51,6 +51,10 @@ set(LIBHV_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libhv/install/include/hv)
 set(LIBHV_LIB_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libhv/install/lib)
 set(PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${LIBHV_INCLUDE_DIRS})
 set(PROJECT_LIB_DIRS ${PROJECT_LIB_DIRS} ${LIBHV_LIB_DIRS})
+
+# eventpp
+set(EVENTPP_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/eventpp/install/include/eventpp)
+set(PROJECT_INCLUDE_DIRS ${PROJECT_INCLUDE_DIRS} ${EVENTPP_INCLUDE_DIRS})
 
 # get source files
 file(GLOB COMMON_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp)

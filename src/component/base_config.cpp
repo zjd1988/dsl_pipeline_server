@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include "common/logger.h"
+#include "common/pystring.h"
 #include "component/base_config.h"
 
 namespace DslPipelineServer
@@ -56,10 +57,11 @@ namespace DslPipelineServer
 
     int convertStrToComponentType(const std::string type_str, ComponentType& type)
     {
-        if (gStrToComponentType.end() == gStrToComponentType.find(type_str))
+        std::string upper_str = pystring::upper(type_str);
+        if (gStrToComponentType.end() == gStrToComponentType.find(upper_str))
             return -1;
 
-        type = gStrToComponentType[type_str];
+        type = gStrToComponentType[upper_str];
         return 0;
     }
 

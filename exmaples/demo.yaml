@@ -1,35 +1,41 @@
+name: "test"
 components:
   - name: "demo-source"
     type: "source"
     config: 
-      type: "file_source"
-      file_path: ""
+      type: "file"
+      file_path: "/opt/nvidia/deepstream/deepstream/samples/streams/sample_1080p_h265.mp4"
       repeat_enabled: false
 
-  - name: "demo-primary-tis"
+  - name: "demo-primary-gie"
     type: "infer"
     config: 
-      type: "primary_tis"
-      infer_config_file: ""
+      type: "primary_gie"
+      engine_file: "/opt/nvidia/deepstream/deepstream/samples/triton_model_repo/Primary_Detector/1/resnet18_trafficcamnet.etlt_b1_gpu0_int8.engine"
+      config_file: "/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/deepstream-preprocess-test/config_infer.txt"
       interval: 0
 
   - name: "demo-iou-tracker"
     type: "tracker"
     config: 
-      config_file: ""
+      config_file: "/opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_IOU.yml"
       width: 480
       height: 272
 
   - name: "demo-on-screen-display"
     type: "osd"
     config: 
-      text_enabled: true
-      clock_enabled: true
-      bbox_enabled: true
-      mask_enabled: false
+      text_enable: true
+      clock_enable: true
+      bbox_enable: true
+      mask_enable: false
 
-  - name: "demo-rtsp-sink"
+  - name: "demo-file-sink"
     type: "sink"
     config: 
-      type: "rtsp_server"
-
+      type: "file"
+      file_path: "./output.mp4"
+      encoder: 1
+      container: 0
+      bitrate: 0
+      iframe_interval: 30

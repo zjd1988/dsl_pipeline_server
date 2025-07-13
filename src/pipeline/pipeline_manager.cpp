@@ -76,44 +76,36 @@ namespace DslPipelineServer
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_pipelines.find(name);
-        if (m_pipelines.end() != it)
+        if (m_pipelines.end() != it && nullptr != it->second.get())
         {
-            m_pipelines[name].reset();
+            it->second.reset();
             m_pipelines.erase(it);
         }
         return 0;
     }
 
-    void PipelineManager::stopPipelines(const std::vector<std::string> names)
+    void PipelineManager::stopPipelines(const std::vector<std::string> pipeline_names)
     {
-        if (0 == names.size())
+        std::vector<std::string> stop_names = pipeline_names;
+        if (0 == stop_names.size())
         {
             for (auto it = m_pipelines.begin(); it != m_pipelines.end(); it++)
             {
                 std::string name = it->first;
-                if (0 != stopPipeline(name))
-                {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "stop pipeline: {} fail", name);
-                }
-                else
-                {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "stop pipeline: {} success", name);
-                }
+                stop_names.emplace_back(name);
             }
         }
-        else
+
+        for (size_t index = 0; index < stop_names.size(); index++)
         {
-            for (size_t index = 0; index < names.size(); index++)
+            std::string name = stop_names[index];
+            if (0 != stopPipeline(name))
             {
-                std::string name = names[index];
-                if (0 != stopPipeline(name))
-                {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "stop pipeline: {} fail", name);
-                }
-                else
-                {
-                    PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "stop pipeline: {} success", name);
-                }
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_ERROR, "stop pipeline: {} fail", name);
+            }
+            else
+            {
+                PIPELINE_LOG(PIPELINE_LOG_LEVEL_INFO, "stop pipeline: {} success", name);
             }
         }
         return;

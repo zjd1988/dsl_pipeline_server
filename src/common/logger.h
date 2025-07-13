@@ -55,7 +55,9 @@ spdlog::debug("This message should be displayed..");
 
 #define PIPELINE_LOG_IMPL(level, ...)                                               \
 do {                                                                                \
-    auto logger = DslPipelineServer::PipelineLogger::Instance().getLogger();            \
+    auto logger = DslPipelineServer::PipelineLogger::Instance().getLogger();        \
+    if (nullptr == logger)                                                          \
+        logger = spdlog::default_logger_raw();                                      \
     switch(level)                                                                   \
     {                                                                               \
         case PIPELINE_LOG_LEVEL_TRACE:                                              \
